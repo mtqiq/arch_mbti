@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 
@@ -8,6 +8,12 @@ export default function Home() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [step, setStep] = useState<"top" | "name">("top");
+
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
+  }, []);
 
   const handleStart = () => {
     setStep("name");
