@@ -9,9 +9,11 @@ import { toPng } from "html-to-image";
 
 interface AnalysisData {
   axisAnalyses: { axis: string; title: string; analysis: string }[];
+  crossAxisInsight: string;
   selectedArchitect: string;
   selectionReason: string;
   architectInsight: string;
+  growthHint: string;
   closingMessage: string;
 }
 
@@ -304,6 +306,13 @@ export default function ResultPage() {
                     score.axis as keyof typeof axisDefinitions
                   ];
                 const percentage = ((score.average - 1) / 4) * 100;
+                // 左寄り(0%)→青(primary), 右寄り(100%)→赤(accent), 中間→紫混色
+                const leanLeft = percentage < 50;
+                const intensity = Math.abs(percentage - 50) / 50; // 0〜1
+                const barColor = leanLeft
+                  ? `color-mix(in srgb, var(--color-primary) ${50 + intensity * 50}%, var(--color-primary-light))`
+                  : `color-mix(in srgb, var(--color-accent) ${50 + intensity * 50}%, var(--color-accent-light))`;
+                const dotBorderColor = leanLeft ? "var(--color-primary)" : "var(--color-accent)";
                 return (
                   <div key={score.axis}>
                     <div className="flex justify-between text-xs mb-1">
@@ -328,13 +337,15 @@ export default function ResultPage() {
                     </div>
                     <div className="relative h-3 bg-gray-100 rounded-full overflow-hidden">
                       <motion.div
-                        className="absolute left-0 top-0 h-full bg-gradient-to-r from-primary to-accent rounded-full"
+                        className="absolute left-0 top-0 h-full rounded-full"
+                        style={{ background: barColor }}
                         initial={{ width: 0 }}
                         animate={{ width: `${percentage}%` }}
                         transition={{ duration: 0.8, delay: 0.5 }}
                       />
                       <motion.div
-                        className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white border-2 border-primary rounded-full shadow"
+                        className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow"
+                        style={{ borderWidth: 2, borderStyle: "solid", borderColor: dotBorderColor }}
                         initial={{ left: 0 }}
                         animate={{ left: `calc(${percentage}% - 8px)` }}
                         transition={{ duration: 0.8, delay: 0.5 }}
@@ -352,6 +363,23 @@ export default function ResultPage() {
               })}
             </div>
           </motion.div>
+
+          {/* Cross-axis insight */}
+          {analysis?.crossAxisInsight && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 }}
+              className="bg-gradient-to-br from-primary/5 to-accent/5 rounded-3xl p-6"
+            >
+              <h3 className="text-lg font-bold mb-3">
+                4軸の交差点 ― あなたの建築的人格
+              </h3>
+              <p className="text-sm text-text-light leading-relaxed">
+                {analysis.crossAxisInsight}
+              </p>
+            </motion.div>
+          )}
 
           {/* Selection reason */}
           {analysis?.selectionReason && (
@@ -381,6 +409,23 @@ export default function ResultPage() {
               <h3 className="text-lg font-bold mb-3">建築的考察</h3>
               <p className="text-sm text-text-light leading-relaxed">
                 {analysis.architectInsight}
+              </p>
+            </motion.div>
+          )}
+
+          {/* Growth hint */}
+          {analysis?.growthHint && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.55 }}
+              className="bg-white rounded-3xl shadow-lg p-6"
+            >
+              <h3 className="text-lg font-bold mb-3">
+                あなたの伸びしろ
+              </h3>
+              <p className="text-sm text-text-light leading-relaxed">
+                {analysis.growthHint}
               </p>
             </motion.div>
           )}
