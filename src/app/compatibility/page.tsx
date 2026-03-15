@@ -43,6 +43,7 @@ export default function CompatibilityPage() {
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingParticipants, setLoadingParticipants] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const fetchStarted = useRef(false);
 
   // Load self data from sessionStorage
@@ -61,13 +62,18 @@ export default function CompatibilityPage() {
     fetchStarted.current = true;
 
     fetch("/api/participants")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error("参加者の取得に失敗しました");
+        return r.json();
+      })
       .then((data) => {
         if (Array.isArray(data)) {
           setParticipants(data);
         }
       })
-      .catch(() => {})
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : "参加者の取得に失敗しました");
+      })
       .finally(() => setLoadingParticipants(false));
   }, []);
 
@@ -88,6 +94,7 @@ export default function CompatibilityPage() {
     setLoading(true);
     setScoreData(null);
     setAnalysis(null);
+    setError(null);
     setStep("result");
 
     const selfParticipant = {
@@ -158,8 +165,8 @@ export default function CompatibilityPage() {
       if (jsonMatch) {
         setAnalysis(JSON.parse(jsonMatch[0]));
       }
-    } catch {
-      // error
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "エラーが発生しました");
     } finally {
       setLoading(false);
     }
@@ -499,6 +506,25 @@ export default function CompatibilityPage() {
                       </div>
                     </div>
                   ) : null}
+
+                  {/* Error state */}
+                  {error && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-accent/10 rounded-2xl p-4 mb-4 text-center"
+                    >
+                      <p className="text-sm text-accent font-medium">
+                        {error}
+                      </p>
+                      <button
+                        onClick={handleCheck}
+                        className="mt-2 text-xs text-accent underline"
+                      >
+                        再試行する
+                      </button>
+                    </motion.div>
+                  )}
                 </>
               ) : (
                 <div className="text-center py-12">
