@@ -63,15 +63,19 @@ export default function CompatibilityPage() {
 
     fetch("/api/participants")
       .then((r) => {
-        if (!r.ok) throw new Error("参加者の取得に失敗しました");
+        if (!r.ok) throw new Error(`参加者の取得に失敗しました（${r.status}）`);
         return r.json();
       })
       .then((data) => {
         if (Array.isArray(data)) {
           setParticipants(data);
+        } else {
+          throw new Error("参加者データの形式が不正です");
         }
       })
       .catch((err) => {
+        console.error("Failed to fetch participants:", err);
+        fetchStarted.current = false;
         setError(err instanceof Error ? err.message : "参加者の取得に失敗しました");
       })
       .finally(() => setLoadingParticipants(false));
@@ -240,6 +244,36 @@ export default function CompatibilityPage() {
                   <p className="text-sm text-text-muted">
                     参加者を読み込んでいます...
                   </p>
+                </div>
+              ) : error ? (
+                <div className="text-center py-12">
+                  <div className="text-4xl mb-4">⚠️</div>
+                  <p className="text-sm text-red-500 mb-2">
+                    {error}
+                  </p>
+                  <button
+                    onClick={() => {
+                      setError(null);
+                      setLoadingParticipants(true);
+                      fetch("/api/participants")
+                        .then((r) => {
+                          if (!r.ok) throw new Error("参加者の取得に失敗しました");
+                          return r.json();
+                        })
+                        .then((data) => {
+                          if (Array.isArray(data)) {
+                            setParticipants(data);
+                          }
+                        })
+                        .catch((err) => {
+                          setError(err instanceof Error ? err.message : "参加者の取得に失敗しました");
+                        })
+                        .finally(() => setLoadingParticipants(false));
+                    }}
+                    className="text-sm text-primary underline mt-2"
+                  >
+                    再試行する
+                  </button>
                 </div>
               ) : otherParticipants.length === 0 ? (
                 <div className="text-center py-12">

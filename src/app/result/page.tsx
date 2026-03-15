@@ -133,13 +133,18 @@ export default function ResultPage() {
         axisScores: diagnosisData.axisScores,
       }),
     })
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`Participant save failed: ${r.status}`);
+        return r.json();
+      })
       .then((data) => {
         if (data?.id) {
           sessionStorage.setItem("participantId", data.id);
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.error("Failed to save participant:", err);
+      });
   }, [diagnosisData, analysis]);
 
   const handleSaveImage = useCallback(async () => {
