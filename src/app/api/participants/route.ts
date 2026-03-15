@@ -25,7 +25,11 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Failed to insert participant:", error);
+    return NextResponse.json(
+      { error: formatDbError(error.message) },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json(data);
@@ -42,8 +46,18 @@ export async function GET() {
 
   if (error) {
     console.error("Failed to fetch participants:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: formatDbError(error.message) },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json(data ?? []);
+}
+
+function formatDbError(message: string): string {
+  if (message?.includes("relation") && message?.includes("does not exist")) {
+    return "DBテーブルが未作成です。Supabaseの SQL Editor で participants テーブルを作成してください。";
+  }
+  return message;
 }

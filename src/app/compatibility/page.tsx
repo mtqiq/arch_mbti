@@ -62,8 +62,11 @@ export default function CompatibilityPage() {
     fetchStarted.current = true;
 
     fetch("/api/participants")
-      .then((r) => {
-        if (!r.ok) throw new Error(`参加者の取得に失敗しました（${r.status}）`);
+      .then(async (r) => {
+        if (!r.ok) {
+          const body = await r.json().catch(() => null);
+          throw new Error(body?.error || `参加者の取得に失敗しました（${r.status}）`);
+        }
         return r.json();
       })
       .then((data) => {
