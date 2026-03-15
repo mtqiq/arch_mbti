@@ -63,6 +63,9 @@ export default function Home() {
           </motion.button>
 
           <p className="mt-6 text-xs text-text-muted">所要時間：約3分</p>
+          <p className="mt-4 text-xs text-text-muted opacity-60">
+            Created by 武藤
+          </p>
         </motion.div>
       ) : (
         <motion.div

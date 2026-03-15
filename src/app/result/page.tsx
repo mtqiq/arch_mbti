@@ -1,10 +1,14 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { mbtiTypes, axisDefinitions } from "@/data/types";
 import type { DiagnosisResult } from "@/lib/diagnosis";
+import ArchitectPortrait from "@/components/illustrations/ArchitectPortrait";
+import BuildingIllustration from "@/components/illustrations/BuildingIllustration";
+import { architectVisuals } from "@/data/illustrationData";
+import { toPng } from "html-to-image";
 
 interface AnalysisData {
   axisAnalyses: { axis: string; title: string; analysis: string }[];
@@ -13,6 +17,8 @@ interface AnalysisData {
   architectInsight: string;
   closingMessage: string;
 }
+
+const SITE_URL = typeof window !== "undefined" ? window.location.origin : "";
 
 export default function ResultPage() {
   const router = useRouter();
@@ -23,7 +29,9 @@ export default function ResultPage() {
   const [loading, setLoading] = useState(true);
   const [streamText, setStreamText] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const fetchStarted = useRef(false);
+  const resultCardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const stored = sessionStorage.getItem("diagnosisData");
@@ -91,6 +99,25 @@ export default function ResultPage() {
 
     fetchAnalysis();
   }, [router]);
+
+  const handleSaveImage = useCallback(async () => {
+    if (!resultCardRef.current) return;
+    setSaving(true);
+    try {
+      const dataUrl = await toPng(resultCardRef.current, {
+        backgroundColor: "#F8F9FE",
+        pixelRatio: 2,
+      });
+      const link = document.createElement("a");
+      link.download = "建築家MBTI結果.png";
+      link.href = dataUrl;
+      link.click();
+    } catch {
+      alert("画像の保存に失敗しました。スクリーンショットをお試しください。");
+    } finally {
+      setSaving(false);
+    }
+  }, []);
 
   if (!diagnosisData) return null;
 
@@ -163,185 +190,224 @@ export default function ResultPage() {
     (a) => a.name === selectedArchitectName
   ) || typeData.architects[diagnosisData.selectedArchitectIndex];
 
+  const visuals = architectVisuals[selectedArchitectData.name];
+
   return (
     <div className="min-h-screen pb-20">
-      {/* Hero section */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="bg-gradient-to-br from-primary to-primary-dark text-white px-4 pt-12 pb-16 text-center"
-      >
-        <p className="text-sm opacity-80 mb-2">
-          {diagnosisData.userName
-            ? `${diagnosisData.userName}さんは...`
-            : "あなたは..."}
-        </p>
-        <div className="text-xs opacity-60 mb-4 tracking-widest">
-          {diagnosisData.typeCode}
-        </div>
-        <h1 className="text-3xl font-black mb-2">{typeData.name}</h1>
-        <p className="text-xs opacity-60 mb-4">{typeData.reading}</p>
-        <p className="text-base opacity-90 italic">
-          「{typeData.catchcopy}」
-        </p>
-      </motion.div>
-
-      <div className="max-w-lg mx-auto px-4 -mt-8 space-y-6">
-        {/* Architect card */}
+      {/* ===== Saveable result card area ===== */}
+      <div ref={resultCardRef}>
+        {/* Hero section */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-white rounded-3xl shadow-lg p-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="bg-gradient-to-br from-primary to-primary-dark text-white px-4 pt-12 pb-16 text-center"
         >
-          <div className="text-center mb-4">
-            <div className="text-3xl mb-2">🏗️</div>
-            <p className="text-xs text-text-muted mb-1">
-              あなたに最も近い建築家
-            </p>
-            <h2 className="text-2xl font-black text-text">
-              {selectedArchitectData.name}
-            </h2>
+          <p className="text-sm opacity-80 mb-2">
+            {diagnosisData.userName
+              ? `${diagnosisData.userName}さんは...`
+              : "あなたは..."}
+          </p>
+          <div className="text-xs opacity-60 mb-4 tracking-widest">
+            {diagnosisData.typeCode}
           </div>
-          <div className="flex flex-wrap justify-center gap-2 mb-4">
-            {selectedArchitectData.works.map((work) => (
-              <span
-                key={work}
-                className="px-3 py-1 bg-primary/10 text-primary text-xs font-medium rounded-full"
-              >
-                {work}
-              </span>
-            ))}
-          </div>
-          <p className="text-sm text-text-light text-center leading-relaxed">
-            {selectedArchitectData.trait}
+          <h1 className="text-3xl font-black mb-2">{typeData.name}</h1>
+          <p className="text-xs opacity-60 mb-4">{typeData.reading}</p>
+          <p className="text-base opacity-90 italic">
+            「{typeData.catchcopy}」
           </p>
         </motion.div>
 
-        {/* Axis scores */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-white rounded-3xl shadow-lg p-6"
-        >
-          <h3 className="text-lg font-bold mb-4 text-center">
-            4軸のスコア
-          </h3>
-          <div className="space-y-5">
-            {diagnosisData.axisScores.map((score) => {
-              const def =
-                axisDefinitions[
-                  score.axis as keyof typeof axisDefinitions
-                ];
-              const percentage = ((score.average - 1) / 4) * 100;
-              return (
-                <div key={score.axis}>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span
-                      className={`font-bold ${
-                        score.letter === def.left.letter
-                          ? "text-primary"
-                          : "text-text-muted"
-                      }`}
-                    >
-                      {def.left.letter} {def.left.label}
-                    </span>
-                    <span
-                      className={`font-bold ${
-                        score.letter === def.right.letter
-                          ? "text-accent"
-                          : "text-text-muted"
-                      }`}
-                    >
-                      {def.right.label} {def.right.letter}
-                    </span>
-                  </div>
-                  <div className="relative h-3 bg-gray-100 rounded-full overflow-hidden">
-                    <motion.div
-                      className="absolute left-0 top-0 h-full bg-gradient-to-r from-primary to-accent rounded-full"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${percentage}%` }}
-                      transition={{ duration: 0.8, delay: 0.5 }}
-                    />
-                    <motion.div
-                      className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white border-2 border-primary rounded-full shadow"
-                      initial={{ left: 0 }}
-                      animate={{ left: `calc(${percentage}% - 8px)` }}
-                      transition={{ duration: 0.8, delay: 0.5 }}
-                    />
-                  </div>
-                  {analysis?.axisAnalyses && (
-                    <p className="text-xs text-text-light mt-2 leading-relaxed">
-                      {analysis.axisAnalyses.find(
-                        (a) => a.axis === score.axis
-                      )?.analysis || ""}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </motion.div>
-
-        {/* Selection reason */}
-        {analysis?.selectionReason && (
+        <div className="max-w-lg mx-auto px-4 -mt-8 space-y-6">
+          {/* Architect card with illustration */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
+            transition={{ delay: 0.2 }}
             className="bg-white rounded-3xl shadow-lg p-6"
           >
-            <h3 className="text-lg font-bold mb-3">
-              なぜ{selectedArchitectData.name}なのか
+            <div className="text-center mb-4">
+              {/* Architect Portrait */}
+              <div className="flex justify-center mb-4">
+                <ArchitectPortrait
+                  name={selectedArchitectData.name}
+                  size={140}
+                  bgColor="#6C5CE7"
+                />
+              </div>
+              <p className="text-xs text-text-muted mb-1">
+                あなたに最も近い建築家
+              </p>
+              <h2 className="text-2xl font-black text-text">
+                {selectedArchitectData.name}
+              </h2>
+            </div>
+
+            {/* Building Illustration */}
+            <div className="flex justify-center mb-4">
+              <div className="text-center">
+                <BuildingIllustration
+                  architectName={selectedArchitectData.name}
+                  size={160}
+                  color="#6C5CE7"
+                />
+                {visuals && (
+                  <p className="text-xs text-text-muted mt-1">
+                    {visuals.buildingName}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap justify-center gap-2 mb-4">
+              {selectedArchitectData.works.map((work) => (
+                <span
+                  key={work}
+                  className="px-3 py-1 bg-primary/10 text-primary text-xs font-medium rounded-full"
+                >
+                  {work}
+                </span>
+              ))}
+            </div>
+            <p className="text-sm text-text-light text-center leading-relaxed">
+              {selectedArchitectData.trait}
+            </p>
+          </motion.div>
+
+          {/* Axis scores */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="bg-white rounded-3xl shadow-lg p-6"
+          >
+            <h3 className="text-lg font-bold mb-4 text-center">
+              4軸のスコア
             </h3>
-            <p className="text-sm text-text-light leading-relaxed">
-              {analysis.selectionReason}
-            </p>
+            <div className="space-y-5">
+              {diagnosisData.axisScores.map((score) => {
+                const def =
+                  axisDefinitions[
+                    score.axis as keyof typeof axisDefinitions
+                  ];
+                const percentage = ((score.average - 1) / 4) * 100;
+                return (
+                  <div key={score.axis}>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span
+                        className={`font-bold ${
+                          score.letter === def.left.letter
+                            ? "text-primary"
+                            : "text-text-muted"
+                        }`}
+                      >
+                        {def.left.letter} {def.left.label}
+                      </span>
+                      <span
+                        className={`font-bold ${
+                          score.letter === def.right.letter
+                            ? "text-accent"
+                            : "text-text-muted"
+                        }`}
+                      >
+                        {def.right.label} {def.right.letter}
+                      </span>
+                    </div>
+                    <div className="relative h-3 bg-gray-100 rounded-full overflow-hidden">
+                      <motion.div
+                        className="absolute left-0 top-0 h-full bg-gradient-to-r from-primary to-accent rounded-full"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${percentage}%` }}
+                        transition={{ duration: 0.8, delay: 0.5 }}
+                      />
+                      <motion.div
+                        className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white border-2 border-primary rounded-full shadow"
+                        initial={{ left: 0 }}
+                        animate={{ left: `calc(${percentage}% - 8px)` }}
+                        transition={{ duration: 0.8, delay: 0.5 }}
+                      />
+                    </div>
+                    {analysis?.axisAnalyses && (
+                      <p className="text-xs text-text-light mt-2 leading-relaxed">
+                        {analysis.axisAnalyses.find(
+                          (a) => a.axis === score.axis
+                        )?.analysis || ""}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </motion.div>
-        )}
 
-        {/* Architectural insight */}
-        {analysis?.architectInsight && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="bg-white rounded-3xl shadow-lg p-6"
-          >
-            <h3 className="text-lg font-bold mb-3">建築的考察</h3>
-            <p className="text-sm text-text-light leading-relaxed">
-              {analysis.architectInsight}
+          {/* Selection reason */}
+          {analysis?.selectionReason && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="bg-white rounded-3xl shadow-lg p-6"
+            >
+              <h3 className="text-lg font-bold mb-3">
+                なぜ{selectedArchitectData.name}なのか
+              </h3>
+              <p className="text-sm text-text-light leading-relaxed">
+                {analysis.selectionReason}
+              </p>
+            </motion.div>
+          )}
+
+          {/* Architectural insight */}
+          {analysis?.architectInsight && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="bg-white rounded-3xl shadow-lg p-6"
+            >
+              <h3 className="text-lg font-bold mb-3">建築的考察</h3>
+              <p className="text-sm text-text-light leading-relaxed">
+                {analysis.architectInsight}
+              </p>
+            </motion.div>
+          )}
+
+          {/* Closing message */}
+          {analysis?.closingMessage && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+              className="bg-gradient-to-br from-primary/5 to-accent/5 rounded-3xl p-6 text-center"
+            >
+              <p className="text-base font-medium text-text leading-relaxed italic">
+                「{analysis.closingMessage}」
+              </p>
+            </motion.div>
+          )}
+
+          {/* Credit */}
+          <div className="text-center py-2">
+            <p className="text-xs text-text-muted">
+              建築家MBTI / Created by 武藤
             </p>
-          </motion.div>
-        )}
+          </div>
+        </div>
+      </div>
+      {/* ===== End saveable area ===== */}
 
-        {/* Closing message */}
-        {analysis?.closingMessage && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="bg-gradient-to-br from-primary/5 to-accent/5 rounded-3xl p-6 text-center"
-          >
-            <p className="text-base font-medium text-text leading-relaxed italic">
-              「{analysis.closingMessage}」
-            </p>
-          </motion.div>
-        )}
-
-        {/* Share & Actions */}
+      {/* Share & Actions */}
+      <div className="max-w-lg mx-auto px-4 mt-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7 }}
-          className="flex flex-col gap-3 pt-4"
+          className="flex flex-col gap-3"
         >
           <button
             onClick={() => {
-              const text = `建築家MBTI診断の結果：${typeData.name}（${diagnosisData.typeCode}）\nあなたに近い建築家は「${selectedArchitectData.name}」でした！\n\n#建築家MBTI`;
+              const text = `建築家MBTI診断の結果：${typeData.name}（${diagnosisData.typeCode}）\nあなたに近い建築家は「${selectedArchitectData.name}」でした！\n\nあなたも診断してみよう\n${SITE_URL}\n\n#建築家MBTI`;
               if (navigator.share) {
-                navigator.share({ text });
+                navigator.share({ text, url: SITE_URL });
               } else {
                 navigator.clipboard.writeText(text);
                 alert("シェア用テキストをコピーしました！");
@@ -350,6 +416,13 @@ export default function ResultPage() {
             className="w-full py-4 bg-primary text-white font-bold rounded-2xl shadow-lg shadow-primary/25"
           >
             結果をシェアする
+          </button>
+          <button
+            onClick={handleSaveImage}
+            disabled={saving}
+            className="w-full py-4 bg-white text-primary font-bold rounded-2xl border-2 border-primary disabled:opacity-50"
+          >
+            {saving ? "保存中..." : "結果を画像で保存する"}
           </button>
           <button
             onClick={() => {
