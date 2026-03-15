@@ -28,7 +28,6 @@ export default function ResultPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const fetchStarted = useRef(false);
-  const participantSaved = useRef(false);
   const resultCardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -113,8 +112,9 @@ export default function ResultPage() {
 
   // Auto-save participant data for compatibility feature
   useEffect(() => {
-    if (!diagnosisData || !analysis || participantSaved.current) return;
-    participantSaved.current = true;
+    if (!diagnosisData || !analysis) return;
+    // Already saved this session
+    if (sessionStorage.getItem("participantId")) return;
 
     const typeData = mbtiTypes[diagnosisData.typeCode];
     const selectedName =
@@ -130,7 +130,14 @@ export default function ResultPage() {
         architectName: selectedName,
         axisScores: diagnosisData.axisScores,
       }),
-    }).catch(() => {});
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.id) {
+          sessionStorage.setItem("participantId", data.id);
+        }
+      })
+      .catch(() => {});
   }, [diagnosisData, analysis]);
 
   const handleSaveImage = useCallback(async () => {
@@ -441,6 +448,7 @@ export default function ResultPage() {
             onClick={() => {
               sessionStorage.removeItem("diagnosisData");
               sessionStorage.removeItem("analysisResult");
+              sessionStorage.removeItem("participantId");
               router.push("/");
             }}
             className="w-full py-4 bg-white text-text-light font-medium rounded-2xl border-2 border-gray-200"

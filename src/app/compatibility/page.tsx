@@ -169,16 +169,14 @@ export default function CompatibilityPage() {
 
   const selfType = mbtiTypes[selfData.typeCode];
 
-  // Filter out self from participants (by matching name + type)
+  // Filter out self by saved participant ID
+  const selfParticipantId = typeof window !== "undefined"
+    ? sessionStorage.getItem("participantId")
+    : null;
   const selfArchitectName =
     selfType.architects[selfData.selectedArchitectIndex].name;
   const otherParticipants = participants.filter(
-    (p) =>
-      !(
-        p.name === (selfData.userName || "ゲスト") &&
-        p.type_code === selfData.typeCode &&
-        p.architect_name === selfArchitectName
-      )
+    (p) => p.id !== selfParticipantId
   );
 
   return (
