@@ -40,6 +40,18 @@ export default function ResultPage() {
     const data = JSON.parse(stored);
     setDiagnosisData(data);
 
+    // Check for cached analysis result
+    const cachedAnalysis = sessionStorage.getItem("analysisResult");
+    if (cachedAnalysis) {
+      try {
+        setAnalysis(JSON.parse(cachedAnalysis));
+        setLoading(false);
+        return;
+      } catch {
+        // cache invalid, re-fetch
+      }
+    }
+
     if (fetchStarted.current) return;
     fetchStarted.current = true;
 
@@ -87,6 +99,7 @@ export default function ResultPage() {
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);
           setAnalysis(parsed);
+          sessionStorage.setItem("analysisResult", JSON.stringify(parsed));
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "エラーが発生しました");
@@ -427,6 +440,7 @@ export default function ResultPage() {
           <button
             onClick={() => {
               sessionStorage.removeItem("diagnosisData");
+              sessionStorage.removeItem("analysisResult");
               router.push("/");
             }}
             className="w-full py-4 bg-white text-text-light font-medium rounded-2xl border-2 border-gray-200"
