@@ -5,9 +5,6 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { mbtiTypes, axisDefinitions } from "@/data/types";
 import type { DiagnosisResult } from "@/lib/diagnosis";
-import ArchitectPortrait from "@/components/illustrations/ArchitectPortrait";
-import BuildingIllustration from "@/components/illustrations/BuildingIllustration";
-import { architectVisuals } from "@/data/illustrationData";
 import { toPng } from "html-to-image";
 
 interface AnalysisData {
@@ -190,8 +187,6 @@ export default function ResultPage() {
     (a) => a.name === selectedArchitectName
   ) || typeData.architects[diagnosisData.selectedArchitectIndex];
 
-  const visuals = architectVisuals[selectedArchitectData.name];
-
   return (
     <div className="min-h-screen pb-20">
       {/* ===== Saveable result card area ===== */}
@@ -226,14 +221,7 @@ export default function ResultPage() {
             className="bg-white rounded-3xl shadow-lg p-6"
           >
             <div className="text-center mb-4">
-              {/* Architect Portrait */}
-              <div className="flex justify-center mb-4">
-                <ArchitectPortrait
-                  name={selectedArchitectData.name}
-                  size={140}
-                  bgColor="#6C5CE7"
-                />
-              </div>
+              <div className="text-3xl mb-2">🏗️</div>
               <p className="text-xs text-text-muted mb-1">
                 あなたに最も近い建築家
               </p>
@@ -241,23 +229,6 @@ export default function ResultPage() {
                 {selectedArchitectData.name}
               </h2>
             </div>
-
-            {/* Building Illustration */}
-            <div className="flex justify-center mb-4">
-              <div className="text-center">
-                <BuildingIllustration
-                  architectName={selectedArchitectData.name}
-                  size={160}
-                  color="#6C5CE7"
-                />
-                {visuals && (
-                  <p className="text-xs text-text-muted mt-1">
-                    {visuals.buildingName}
-                  </p>
-                )}
-              </div>
-            </div>
-
             <div className="flex flex-wrap justify-center gap-2 mb-4">
               {selectedArchitectData.works.map((work) => (
                 <span
