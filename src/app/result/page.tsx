@@ -28,6 +28,7 @@ export default function ResultPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const fetchStarted = useRef(false);
+  const participantSaved = useRef(false);
   const resultCardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -96,6 +97,28 @@ export default function ResultPage() {
 
     fetchAnalysis();
   }, [router]);
+
+  // Auto-save participant data for compatibility feature
+  useEffect(() => {
+    if (!diagnosisData || !analysis || participantSaved.current) return;
+    participantSaved.current = true;
+
+    const typeData = mbtiTypes[diagnosisData.typeCode];
+    const selectedName =
+      analysis.selectedArchitect ||
+      typeData.architects[diagnosisData.selectedArchitectIndex].name;
+
+    fetch("/api/participants", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: diagnosisData.userName || "ゲスト",
+        typeCode: diagnosisData.typeCode,
+        architectName: selectedName,
+        axisScores: diagnosisData.axisScores,
+      }),
+    }).catch(() => {});
+  }, [diagnosisData, analysis]);
 
   const handleSaveImage = useCallback(async () => {
     if (!resultCardRef.current) return;
@@ -387,6 +410,12 @@ export default function ResultPage() {
             className="w-full py-4 bg-primary text-white font-bold rounded-2xl shadow-lg shadow-primary/25"
           >
             結果をシェアする
+          </button>
+          <button
+            onClick={() => router.push("/compatibility")}
+            className="w-full py-4 bg-accent text-white font-bold rounded-2xl shadow-lg shadow-accent/25"
+          >
+            友達との相性をチェック
           </button>
           <button
             onClick={handleSaveImage}
